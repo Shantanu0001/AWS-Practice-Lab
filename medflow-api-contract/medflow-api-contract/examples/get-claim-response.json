@@ -1,0 +1,10 @@
+{
+  "claimId": "CLM-1042",
+  "clientReference": "DEMO-REF-218",
+  "serviceDate": "2026-10-08",
+  "amount": 425.0,
+  "status": "MANUAL_REVIEW",
+  "submittedAt": "2026-10-11T08:45:00Z",
+  "updatedAt": "2026-10-11T08:47:00Z",
+  "statusReason": "A required field needs review. Contact your billing administrator."
+}

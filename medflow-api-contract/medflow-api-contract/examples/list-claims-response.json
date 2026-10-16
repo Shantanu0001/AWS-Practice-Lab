@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "claimId": "CLM-1042",
+      "clientReference": "DEMO-REF-218",
+      "serviceDate": "2026-10-08",
+      "amount": 425.0,
+      "status": "PROCESSING",
+      "submittedAt": "2026-10-11T08:45:00Z",
+      "updatedAt": "2026-10-11T08:45:00Z"
+    },
+    {
+      "claimId": "CLM-1041",
+      "clientReference": "DEMO-REF-217",
+      "serviceDate": "2026-10-07",
+      "amount": 189.5,
+      "status": "ACCEPTED",
+      "submittedAt": "2026-10-10T08:45:00Z",
+      "updatedAt": "2026-10-10T08:48:00Z"
+    }
+  ]
+}

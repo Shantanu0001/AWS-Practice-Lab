@@ -1,0 +1,299 @@
+openapi: 3.0.3
+info:
+  title: MedFlow Claims API
+  version: 0.1.0
+  description: |
+    Proposed Learning Lab API contract for the MedFlow portal prototype.
+    Endpoint paths and field names in this draft are implementation proposals,
+    not claims that an API is already deployed. All example data is synthetic.
+servers:
+  - url: https://api.example.invalid/v1
+    description: Placeholder only; replace after an API is actually deployed.
+tags:
+  - name: Claims
+paths:
+  /claims:
+    get:
+      tags: [Claims]
+      operationId: listClaims
+      summary: List claims for the authenticated tenant
+      description: |
+        Tenant scope is derived from validated identity context on the server.
+        The browser must not choose the tenant scope. Do not cache this response.
+      security:
+        - CognitoBearer: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/ClaimStatus'
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: nextToken
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: Claims visible to the authenticated tenant
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags: [Claims]
+      operationId: submitClaim
+      summary: Create a claim intake record
+      description: |
+        Accept the claim metadata, persist an idempotent intake record, and
+        enqueue asynchronous processing. Return promptly; processing is not
+        complete when this response is returned. The server validates the
+        tenant context and owns the idempotency implementation.
+      security:
+        - CognitoBearer: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          description: Client-generated opaque key. Server enforces uniqueness within the authenticated tenant.
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimSubmission'
+      responses:
+        '202':
+          description: Intake accepted for asynchronous processing
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimSubmissionAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: >-
+            The request conflicts with an existing claim: either the
+            Idempotency-Key was reused with a different request body,
+            or the clientReference already exists in this tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: >-
+            The JSON request body exceeds the local mock's 16,384-byte
+            request-body limit. document.sizeBytes is metadata only;
+            no document bytes are uploaded or checked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Request throttled
+          headers:
+            Retry-After:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /claims/{claimId}:
+    get:
+      tags: [Claims]
+      operationId: getClaim
+      summary: Get a claim and its current processing status
+      description: |
+        Query by both claim ID and authenticated tenant ID at the data-access
+        layer. An ID belonging to another tenant must not disclose the record.
+        Do not cache this response.
+      security:
+        - CognitoBearer: []
+      parameters:
+        - in: path
+          name: claimId
+          required: true
+          schema:
+            type: string
+            pattern: '^CLM-[A-Z0-9-]{3,40}$'
+      responses:
+        '200':
+          description: Claim detail for the authenticated tenant
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Claim not found in the authenticated tenant scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    CognitoBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT must be verified by the configured authorizer. Tenant context is trusted only after server-side validation.
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, invalid, or expired credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Authenticated caller is not authorized for this operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    ClaimStatus:
+      type: string
+      enum: [PROCESSING, ACCEPTED, MANUAL_REVIEW, REJECTED]
+    ClaimSubmission:
+      type: object
+      additionalProperties: false
+      required: [clientReference, serviceDate, amount]
+      properties:
+        clientReference:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Za-z0-9._-]+$'
+        serviceDate:
+          type: string
+          format: date
+        amount:
+          type: number
+          minimum: 0.01
+          maximum: 99999999.99
+          multipleOf: 0.01
+        document:
+          type: object
+          additionalProperties: false
+          description: Metadata for a future authorized upload flow; no raw document bytes in this JSON request.
+          required: [fileName, contentType, sizeBytes]
+          properties:
+            fileName:
+              type: string
+              minLength: 1
+              maxLength: 255
+            contentType:
+              type: string
+              enum: [application/pdf, image/tiff]
+            sizeBytes:
+              type: integer
+              minimum: 1
+              maximum: 26214400
+    Claim:
+      type: object
+      required: [claimId, clientReference, serviceDate, amount, status, submittedAt, updatedAt]
+      properties:
+        claimId:
+          type: string
+          example: CLM-1042
+        clientReference:
+          type: string
+          example: DEMO-REF-218
+        serviceDate:
+          type: string
+          format: date
+        amount:
+          type: number
+          format: double
+          example: 425.00
+        status:
+          $ref: '#/components/schemas/ClaimStatus'
+        submittedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        statusReason:
+          type: string
+          maxLength: 500
+          description: Safe, user-facing reason; never include stack traces or sensitive data.
+    ClaimListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Claim'
+        nextToken:
+          type: string
+    ClaimSubmissionAccepted:
+      type: object
+      required: [claimId, status, acceptedAt, statusUrl]
+      properties:
+        claimId:
+          type: string
+          example: CLM-1043
+        status:
+          type: string
+          enum: [PROCESSING]
+        acceptedAt:
+          type: string
+          format: date-time
+        statusUrl:
+          type: string
+          format: uri-reference
+          example: /v1/claims/CLM-1043
+    Error:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          maxLength: 300
+        requestId:
+          type: string
+          description: Correlation identifier for support and log investigation.

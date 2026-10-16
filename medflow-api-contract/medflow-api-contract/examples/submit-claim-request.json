@@ -1,0 +1,10 @@
+{
+  "clientReference": "DEMO-REF-218",
+  "serviceDate": "2026-10-08",
+  "amount": 425.0,
+  "document": {
+    "fileName": "synthetic-claim.pdf",
+    "contentType": "application/pdf",
+    "sizeBytes": 143210
+  }
+}

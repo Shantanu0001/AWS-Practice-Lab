@@ -1,0 +1,262 @@
+{
+    "AWSTemplateFormatVersion":  "2010-09-09",
+    "Description":  "MedFlow Stage 3 S3-01 network resilience slice. Creates two dedicated app route tables and associations, two zonal public NAT Gateways, two EIPs, and same-AZ default routes. Billable resources; deployment requires approval.",
+    "Parameters":  {
+                       "VpcId":  {
+                                     "Type":  "AWS::EC2::VPC::Id",
+                                     "Description":  "Existing MedFlow VPC."
+                                 },
+                       "PublicSubnetA":  {
+                                             "Type":  "AWS::EC2::Subnet::Id",
+                                             "Description":  "Existing public subnet in the same AZ as AppSubnetA; must route to the IGW."
+                                         },
+                       "PublicSubnetB":  {
+                                             "Type":  "AWS::EC2::Subnet::Id",
+                                             "Description":  "Existing public subnet in the same AZ as AppSubnetB; must route to the IGW."
+                                         },
+                       "AppSubnetA":  {
+                                          "Type":  "AWS::EC2::Subnet::Id",
+                                          "Description":  "Existing private application subnet in AZ A."
+                                      },
+                       "AppSubnetB":  {
+                                          "Type":  "AWS::EC2::Subnet::Id",
+                                          "Description":  "Existing private application subnet in AZ B."
+                                      }
+                   },
+    "Resources":  {
+                      "AppRouteTableA":  {
+                                             "Type":  "AWS::EC2::RouteTable",
+                                             "Properties":  {
+                                                                "VpcId":  {
+                                                                              "Ref":  "VpcId"
+                                                                          },
+                                                                "Tags":  [
+                                                                             {
+                                                                                 "Key":  "Project",
+                                                                                 "Value":  "MedFlow"
+                                                                             },
+                                                                             {
+                                                                                 "Key":  "Stage",
+                                                                                 "Value":  "3"
+                                                                             },
+                                                                             {
+                                                                                 "Key":  "Name",
+                                                                                 "Value":  "MedFlow-Stage3-App-A-RT"
+                                                                             }
+                                                                         ]
+                                                            }
+                                         },
+                      "AppRouteTableB":  {
+                                             "Type":  "AWS::EC2::RouteTable",
+                                             "Properties":  {
+                                                                "VpcId":  {
+                                                                              "Ref":  "VpcId"
+                                                                          },
+                                                                "Tags":  [
+                                                                             {
+                                                                                 "Key":  "Project",
+                                                                                 "Value":  "MedFlow"
+                                                                             },
+                                                                             {
+                                                                                 "Key":  "Stage",
+                                                                                 "Value":  "3"
+                                                                             },
+                                                                             {
+                                                                                 "Key":  "Name",
+                                                                                 "Value":  "MedFlow-Stage3-App-B-RT"
+                                                                             }
+                                                                         ]
+                                                            }
+                                         },
+                      "AppSubnetAssociationA":  {
+                                                    "Type":  "AWS::EC2::SubnetRouteTableAssociation",
+                                                    "Properties":  {
+                                                                       "SubnetId":  {
+                                                                                        "Ref":  "AppSubnetA"
+                                                                                    },
+                                                                       "RouteTableId":  {
+                                                                                            "Ref":  "AppRouteTableA"
+                                                                                        }
+                                                                   }
+                                                },
+                      "AppSubnetAssociationB":  {
+                                                    "Type":  "AWS::EC2::SubnetRouteTableAssociation",
+                                                    "Properties":  {
+                                                                       "SubnetId":  {
+                                                                                        "Ref":  "AppSubnetB"
+                                                                                    },
+                                                                       "RouteTableId":  {
+                                                                                            "Ref":  "AppRouteTableB"
+                                                                                        }
+                                                                   }
+                                                },
+                      "NatEipA":  {
+                                      "Type":  "AWS::EC2::EIP",
+                                      "Properties":  {
+                                                         "Domain":  "vpc",
+                                                         "Tags":  [
+                                                                      {
+                                                                          "Key":  "Project",
+                                                                          "Value":  "MedFlow"
+                                                                      },
+                                                                      {
+                                                                          "Key":  "Stage",
+                                                                          "Value":  "3"
+                                                                      },
+                                                                      {
+                                                                          "Key":  "Name",
+                                                                          "Value":  "MedFlow-Stage3-NAT-A-EIP"
+                                                                      }
+                                                                  ]
+                                                     }
+                                  },
+                      "NatGatewayA":  {
+                                          "Type":  "AWS::EC2::NatGateway",
+                                          "Properties":  {
+                                                             "AllocationId":  {
+                                                                                  "Fn::GetAtt":  [
+                                                                                                     "NatEipA",
+                                                                                                     "AllocationId"
+                                                                                                 ]
+                                                                              },
+                                                             "SubnetId":  {
+                                                                              "Ref":  "PublicSubnetA"
+                                                                          },
+                                                             "ConnectivityType":  "public",
+                                                             "Tags":  [
+                                                                          {
+                                                                              "Key":  "Project",
+                                                                              "Value":  "MedFlow"
+                                                                          },
+                                                                          {
+                                                                              "Key":  "Stage",
+                                                                              "Value":  "3"
+                                                                          },
+                                                                          {
+                                                                              "Key":  "Name",
+                                                                              "Value":  "MedFlow-Stage3-NAT-A"
+                                                                          }
+                                                                      ]
+                                                         }
+                                      },
+                      "NatEipB":  {
+                                      "Type":  "AWS::EC2::EIP",
+                                      "Properties":  {
+                                                         "Domain":  "vpc",
+                                                         "Tags":  [
+                                                                      {
+                                                                          "Key":  "Project",
+                                                                          "Value":  "MedFlow"
+                                                                      },
+                                                                      {
+                                                                          "Key":  "Stage",
+                                                                          "Value":  "3"
+                                                                      },
+                                                                      {
+                                                                          "Key":  "Name",
+                                                                          "Value":  "MedFlow-Stage3-NAT-B-EIP"
+                                                                      }
+                                                                  ]
+                                                     }
+                                  },
+                      "NatGatewayB":  {
+                                          "Type":  "AWS::EC2::NatGateway",
+                                          "Properties":  {
+                                                             "AllocationId":  {
+                                                                                  "Fn::GetAtt":  [
+                                                                                                     "NatEipB",
+                                                                                                     "AllocationId"
+                                                                                                 ]
+                                                                              },
+                                                             "SubnetId":  {
+                                                                              "Ref":  "PublicSubnetB"
+                                                                          },
+                                                             "ConnectivityType":  "public",
+                                                             "Tags":  [
+                                                                          {
+                                                                              "Key":  "Project",
+                                                                              "Value":  "MedFlow"
+                                                                          },
+                                                                          {
+                                                                              "Key":  "Stage",
+                                                                              "Value":  "3"
+                                                                          },
+                                                                          {
+                                                                              "Key":  "Name",
+                                                                              "Value":  "MedFlow-Stage3-NAT-B"
+                                                                          }
+                                                                      ]
+                                                         }
+                                      },
+                      "AppDefaultRouteA":  {
+                                               "Type":  "AWS::EC2::Route",
+                                               "DependsOn":  "NatGatewayA",
+                                               "Properties":  {
+                                                                  "RouteTableId":  {
+                                                                                       "Ref":  "AppRouteTableA"
+                                                                                   },
+                                                                  "DestinationCidrBlock":  "0.0.0.0/0",
+                                                                  "NatGatewayId":  {
+                                                                                       "Ref":  "NatGatewayA"
+                                                                                   }
+                                                              }
+                                           },
+                      "AppDefaultRouteB":  {
+                                               "Type":  "AWS::EC2::Route",
+                                               "DependsOn":  "NatGatewayB",
+                                               "Properties":  {
+                                                                  "RouteTableId":  {
+                                                                                       "Ref":  "AppRouteTableB"
+                                                                                   },
+                                                                  "DestinationCidrBlock":  "0.0.0.0/0",
+                                                                  "NatGatewayId":  {
+                                                                                       "Ref":  "NatGatewayB"
+                                                                                   }
+                                                              }
+                                           }
+                  },
+    "Outputs":  {
+                    "AppRouteTableAId":  {
+                                             "Value":  {
+                                                           "Ref":  "AppRouteTableA"
+                                                       },
+                                             "Description":  "Dedicated route table associated with AppSubnetA."
+                                         },
+                    "AppRouteTableBId":  {
+                                             "Value":  {
+                                                           "Ref":  "AppRouteTableB"
+                                                       },
+                                             "Description":  "Dedicated route table associated with AppSubnetB."
+                                         },
+                    "NatGatewayAId":  {
+                                          "Value":  {
+                                                        "Ref":  "NatGatewayA"
+                                                    },
+                                          "Description":  "NAT Gateway for app AZ A."
+                                      },
+                    "NatGatewayBId":  {
+                                          "Value":  {
+                                                        "Ref":  "NatGatewayB"
+                                                    },
+                                          "Description":  "NAT Gateway for app AZ B."
+                                      },
+                    "NatEipAAllocationId":  {
+                                                "Value":  {
+                                                              "Fn::GetAtt":  [
+                                                                                 "NatEipA",
+                                                                                 "AllocationId"
+                                                                             ]
+                                                          },
+                                                "Description":  "EIP allocation ID for NAT A."
+                                            },
+                    "NatEipBAllocationId":  {
+                                                "Value":  {
+                                                              "Fn::GetAtt":  [
+                                                                                 "NatEipB",
+                                                                                 "AllocationId"
+                                                                             ]
+                                                          },
+                                                "Description":  "EIP allocation ID for NAT B."
+                                            }
+                }
+}

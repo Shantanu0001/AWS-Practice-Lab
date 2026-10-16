@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  MedFlow Stage 2 Slice A - minimum two-AZ application foundation
+  using an Application Load Balancer and Auto Scaling Group.
+
+Parameters:
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Existing MedFlow VPC
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet::Id
+    Description: Existing MedFlow public subnet A
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet::Id
+    Description: Existing MedFlow public subnet B
+
+  AppSubnetA:
+    Type: AWS::EC2::Subnet::Id
+    Description: Existing MedFlow app subnet A
+
+  AppSubnetB:
+    Type: AWS::EC2::Subnet::Id
+    Description: Existing MedFlow app subnet B
+
+  AlbSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Existing MedFlow ALB security group
+
+  AppSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Existing MedFlow app security group
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+    Description: Learning-lab EC2 instance type
+
+Resources:
+
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-app-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Project
+          Value: MedFlow
+        - Key: Stage
+          Value: Stage2
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${AWS::StackName}-app-profile'
+      Roles:
+        - !Ref AppInstanceRole
+
+  AppLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: ami-0d27e0fb3bac4d724
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Name: !Ref AppInstanceProfile
+        SecurityGroupIds:
+          - !Ref AppSecurityGroupId
+        MetadataOptions:
+          HttpTokens: required
+          HttpEndpoint: enabled
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 8
+              VolumeType: gp3
+              Encrypted: true
+              DeleteOnTermination: true
+        UserData:
+          Fn::Base64: |
+            #!/bin/bash
+            set -eux
+
+            mkdir -p /opt/medflow
+
+            cat > /opt/medflow/server.py <<'PYEOF'
+            import http.server
+            import socket
+            import threading
+
+            class Handler(http.server.BaseHTTPRequestHandler):
+                def do_GET(self):
+                    body = (
+                        "MedFlow Stage 2 Slice A\n"
+                        f"Host: {socket.gethostname()}\n"
+                    ).encode()
+
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/plain")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+
+                def log_message(self, format, *args):
+                    pass
+
+            server = http.server.ThreadingHTTPServer(("0.0.0.0", 80), Handler)
+            server.serve_forever()
+            PYEOF
+
+            cat > /etc/systemd/system/medflow-slice-a.service <<'SERVICEEOF'
+            [Unit]
+            Description=MedFlow Stage 2 Slice A HTTP service
+            After=network-online.target
+            Wants=network-online.target
+
+            [Service]
+            Type=simple
+            ExecStart=/usr/bin/python3 /opt/medflow/server.py
+            Restart=always
+            RestartSec=2
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICEEOF
+
+            systemctl daemon-reload
+            systemctl enable --now medflow-slice-a.service
+
+  AppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VpcId
+      Protocol: HTTP
+      Port: 80
+      TargetType: instance
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: traffic-port
+      HealthCheckPath: /
+      Matcher:
+        HttpCode: '200'
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !Ref AlbSecurityGroupId
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AppTargetGroup
+
+  AppAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: !Sub '${AWS::StackName}-asg'
+      MinSize: '2'
+      DesiredCapacity: '2'
+      MaxSize: '2'
+      VPCZoneIdentifier:
+        - !Ref AppSubnetA
+        - !Ref AppSubnetB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref AppLaunchTemplate
+        Version: !GetAtt AppLaunchTemplate.LatestVersionNumber
+      TargetGroupARNs:
+        - !Ref AppTargetGroup
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 120
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-app'
+          PropagateAtLaunch: true
+        - Key: Project
+          Value: MedFlow
+          PropagateAtLaunch: true
+        - Key: Stage
+          Value: Stage2
+          PropagateAtLaunch: true
+
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT2M
+        WaitOnResourceSignals: false
+
+Outputs:
+
+  LoadBalancerDNSName:
+    Description: DNS name of the Stage 2 Slice A ALB
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+
+  AutoScalingGroupName:
+    Description: Stage 2 Slice A Auto Scaling Group
+    Value: !Ref AppAutoScalingGroup
+
+  TargetGroupArn:
+    Description: Stage 2 Slice A target group
+    Value: !Ref AppTargetGroup
+
+  LaunchTemplateId:
+    Description: Stage 2 Slice A launch template
+    Value: !Ref AppLaunchTemplate

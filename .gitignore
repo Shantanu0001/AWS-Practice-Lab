@@ -1,0 +1,65 @@
+﻿# Operating system / editor files
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+
+# Environment and secret files
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+secrets.*
+credentials
+credentials.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# AWS local configuration / credentials
+.aws/
+
+# Terraform state and local files
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Local logs
+*.log
+
+# Unredacted evidence must never enter Git
+evidence/raw/
+
+# Infrastructure-as-code variable files
+*.tfvars
+*.tfvars.json
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local recovery backups - keep out of Git
+/evidence/contract-patch-backup-20261012-220545/
+/evidence/documentation-baseline-backup-20261012-193224/
+/evidence/documentation-text-fix-backups/
+/evidence/documentation-update-backups/
+/evidence/local-fix-backups/
+*.before
+
+# Timestamped local recovery files and review snapshots
+/.gitignore.backup-*
+*.backup-*
+*.before-*
+.pre-review-backup-*/
+
+# Local snapshots under API contract examples
+/medflow-api-contract/medflow-api-contract/examples/backups/
+/medflow-stage3-starter-pack-v2/medflow_stage3_starter/evidence/s3-01-pre-teardown-20261012-102629.txt
