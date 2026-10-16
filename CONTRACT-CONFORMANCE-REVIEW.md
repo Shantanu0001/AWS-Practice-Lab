@@ -1,9 +1,9 @@
-# MedFlow API contract conformance review — updated local mock
+# MedFlow API contract conformance review - updated local mock
 
 This review applies to the proposed OpenAPI contract in `medflow-api-contract/medflow-api-contract/openapi/medflow-claims-v1.yaml`. The local server remains a learning mock, not a deployed or production-secure API.
 
 ## Aligned in this revision
-- Enforces Idempotency-Key length 8â€“128.
+- Enforces Idempotency-Key length 8-128.
 - Enforces clientReference length/pattern, serviceDate format, amount range/cent precision.
 - Accepts optional `document` metadata with `fileName`, `contentType`, and `sizeBytes`; raw bytes are not uploaded.
 - Returns `202` body with `claimId`, `status`, `acceptedAt`, and `statusUrl`.

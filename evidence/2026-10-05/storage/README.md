@@ -109,7 +109,7 @@ Database validation:
 
 Result:
 - Database: `medflowclaims`
-- User: `medflowadmin`
+- User: `[REDACTED_DEMO_USERNAME]`
 - Server address: private VPC address
 - Server port: `5432`
 

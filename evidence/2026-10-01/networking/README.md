@@ -462,12 +462,13 @@ Therefore, Public A was not yet using the intended public default route.
 
 The incorrect association was replaced using the AWS CLI operation:
 
+The following is an illustrative, redacted command fragment. It is not directly executable until the placeholders are replaced with verified values.
+
 ```powershell
 aws ec2 replace-route-table-association `
   --profile local-profile `
   --region us-east-1 `
   --association-id [ASSOCIATION_ID_REDACTED] `
-  Illustrative command fragment (not directly executable):
   --route-table-id <REDACTED_PUBLIC_ROUTE_TABLE_ID>
 ```
 

@@ -80,18 +80,7 @@ The retained foundation is part of the Learning Lab design and avoids rebuilding
 
 ## Cost checkpoint after teardown
 
-Final account-plan state observed:
-- AWS Free Plan: ACTIVE
-- Remaining credits: 160 USD
-
-Budget checkpoint:
-- Budget: `MedFlow-Zero-Spend-Guardrail`
-- Actual reported: 0 USD
-- Budget limit: 1 USD
-
-The credit balance observed after teardown is recorded as an account-state observation only. No explanation for the change from the earlier observed balance is inferred from this evidence.
-
-Billing data may lag actual resource activity, so the budget's current value is not treated as proof that no charges were incurred.
+The budget report was checked after teardown. Billing data may lag actual resource activity, so this snapshot is not treated as proof that no charges were incurred.
 
 ## Security handling
 

@@ -52,7 +52,15 @@
     return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(value)||0);
   }
   function statusClass(status) {
-    return status.toLowerCase().replace(/\s+/g,"-");
+    const allowedClasses = {
+      "Processing": "processing",
+      "Accepted": "accepted",
+      "Manual review": "manual-review",
+      "Rejected": "rejected"
+    };
+    return Object.prototype.hasOwnProperty.call(allowedClasses, status)
+      ? allowedClasses[status]
+      : "unknown";
   }
   function render() {
     const all = tenantClaims();
