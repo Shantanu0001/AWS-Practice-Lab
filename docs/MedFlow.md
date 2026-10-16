@@ -713,7 +713,7 @@ TLS 1.2+ enforced at the ALB/CloudFront listener (older TLS versions rejected vi
 ### 12.4 Backup Encryption, Data Classification, Retention, Deletion
 
 - AWS Backup vaults use a CMK, and cross-Region backup copies are re-encrypted with a CMK in the destination Region (a KMS key cannot itself be copied across Regions — this is a **[AWS FACT]**: KMS keys are Region-specific, so cross-Region backup/replication requires a separate key in the destination Region **[AWS FACT — https\://docs.aws.amazon.com/kms/latest/developerguide/multi-region-keys-overview\.html]**, and MedFlow uses AWS KMS multi-Region keys for exactly this reason so key material relationships are explicit rather than two unrelated keys).
-- Tier-2 data deletion at end of retention is implemented as **cryptographic deletion** (destroying the tenant-specific data key) in addition to object deletion — recorded as a deliberate design choice (ADR-09) since object deletion alone leaves any already-exfiltrated ciphertext theoretically decryptable if the key is ever also compromised.
+- **Proposed design:** Tier-2 data deletion would combine object deletion with tenant-specific key destruction. Implementation and end-to-end deletion verification are not established by this design document; ADR-09 records the rationale, not proof of deployment.
 - S3 Object Lock (compliance mode) on the raw-document bucket prevents deletion or overwrite of a claim document before its retention date, including by the account root user, which is the specific control that defends against the "malicious insider" and "destructive operator action" scenarios in §17/§20 **[AWS FACT — S3 Object Lock compliance mode prevents object version deletion or overwrite by any user, including the root user, for the specified retention period, https\://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock-overview\.html]**.
 
 ---
@@ -889,7 +889,7 @@ This is treated as a formal discipline, not a slogan:
 | Synchronous vs asynchronous document validation | End-to-end latency perceived by the user, system throughput under the 8x peak             | Compare a synchronous "wait for validation to finish before responding" API design vs. the actual async (SQS/Step Functions) design              | Async decouples upload acknowledgment from validation completion, keeping the upload-facing API responsive even when the validation pipeline is backlogged                                                     | Async adds real complexity (idempotency, eventual consistency in the UI showing "processing" state) that is not worth it for a workload with low volume/low burstiness — for MedFlow's stated 8x peak, it is worth it                                                                                         |
 | Single-Region vs multi-Region (read path only)  | Latency for tenants geographically far from the primary Region                            | Not deployed as a standing service (cost); modeled as a comparison based on documented Route 53 latency-based routing + CloudFront edge behavior | Multi-Region active-active would reduce latency for distant tenants, but MedFlow's assumed tenant base (§5.2, US-based billing companies) does not currently justify the added operational and cost complexity | If MedFlow expanded internationally, this comparison would need to be re-run for real, not assumed                                                                                                                                                                                                            |
 
-### 19.2 Load Test Definition (executed in §29's testing plan)
+### 19.2 Proposed Load-Test Plan (execution not established)
 
 - **Baseline test:** 50 req/s sustained for 15 minutes; pass criteria: p95 < 400 ms, error rate < 0.1%, RDS CPU < 50%.
 - **Peak test:** ramp to 400 req/s over 5 minutes, hold 15 minutes; pass criteria: p95 < 800 ms, error rate < 1%, Auto Scaling reaches steady state within 5 minutes of ramp start, no SQS DLQ growth.
@@ -979,9 +979,9 @@ Disaster-recovery (pilot light) adds an estimated **\~$120–180/month** on top 
 
 ---
 
-## 22. SAA-C03 Coverage Matrix
+## 22. SAA-C03 Study and Architecture Mapping
 
-Categories used, per the assignment's instruction: **Fully implemented (FI)**, **Implemented through experiment (IE)**, **Implemented in simplified form (SF)**, **Compared theoretically (CT)**, **Demonstrated through failure test (FT)**, **Security exercise (SE)**, **Cost exercise (CE)**, **Not relevant (NR)**, **Not practical for individual lab (NP)**.
+The categories below originated as study-plan labels. They are not a verified inventory of the current repository or deployed AWS resources. Treat a category as completed only when specific implementation and validation evidence supports it; Production-Style entries are design material unless independently evidenced.
 
 ### Domain 1 — Design Secure Architectures (30%)
 
@@ -1033,7 +1033,7 @@ Categories used, per the assignment's instruction: **Fully implemented (FI)**, *
 
 ### 22.1 Coverage Percentage and Uncovered Areas
 
-**[ASSUMPTION-adjacent calculation, methodology stated explicitly]**: Counting each distinct task-statement row above, 26 of 33 rows are categorized FI/IE/FT/SE/CE (hands-on or experimentally validated) = **\~79%** hands-on coverage; 6 rows are CT (theoretically compared, not built) = **\~18%**; 1 row is NP/explicitly out of scope = **\~3%**.
+**Coverage percentage not established:** The matrix has not been verified row by row against current implementation and dated evidence. Do not use the previous 79% figure as a measured or validated hands-on coverage claim.
 
 **Weakly covered or uncovered areas, named explicitly:**
 
@@ -1245,7 +1245,7 @@ Each follows **Break → Observe → Diagnose → Fix → Prevent**.
 
 ---
 
-## 30. Error and Failure Analysis Summary
+## 30. Intended Error and Failure Handling (Validation Varies)
 
 | Error class                                       | How MedFlow behaves                                                                                                                                                                              |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -1325,8 +1325,8 @@ Each follows **Break → Observe → Diagnose → Fix → Prevent**.
 
 ## 34. Final Gap Assessment
 
-1. **Does the project realistically cover SAA-C03?** Yes, at roughly 79% direct hands-on/experimental coverage by task-statement count (§22.1), with the remainder explicitly compared theoretically or flagged for a standalone mini-lab — not silently skipped.
-2. **Fully covered:** Domain 1 (Task 1–3) and Domain 2 (Task 1–2) are fully hands-on. Domain 4 (Task 1, 3, 4) are hands-on with real cost-trap evidence.
+1. **Does this document provide a verified SAA-C03 coverage percentage?** No. It maps study topics and proposed exercises; current hands-on coverage must be established from implementation records and dated evidence.
+2. **Coverage limitation:** Do not label exam domains fully hands-on based on this architecture document alone. Verify each claim against the relevant code, test results, and historical AWS evidence.
 3. **Weakly covered:** Domain 3, Task 5 (data ingestion/transformation — no natural fit in this workload); Domain 4, Task 2's purchasing-option break-even math (requires sustained real usage to validate properly).
 4. **Requiring separate mini-labs:** Kinesis/Glue/Athena/QuickSight data pipeline; Site-to-Site VPN; optionally Aurora Serverless v2 hands-on comparison.
 5. **Services that should not be forced into the main architecture:** EKS, Redshift, OpenSearch, MSK, SageMaker/Rekognition/Textract, Elastic Beanstalk — each named with a specific reason in §23.
@@ -1339,7 +1339,7 @@ Each follows **Break → Observe → Diagnose → Fix → Prevent**.
 12. **Threats with the highest false-negative risk:** slow, low-and-slow credential misuse; application-logic bugs the synthetic canary doesn't happen to exercise; genuinely novel/zero-day vulnerabilities (§16.4).
 13. **Attack paths remaining after controls:** a sufficiently sophisticated insider with legitimate `PlatformAdminRole` access and a plausible pretext remains a largely process-level (not purely technical) residual risk (attack scenario 9, §15).
 14. **What breaks first under 10x traffic:** RDS connection/CPU limits, most likely, based on the measured breaking-point test methodology in §19.2 — the *specific* number is intentionally left to be measured at build time, not assumed here.
-15. **What breaks first under an AZ failure:** nothing customer-visible, by design and by Failure Lab #2 — this is the one failure mode this architecture is most confident about, precisely because it's the one most directly addressed by Multi-AZ HA rather than cross-Region DR.
+15. **What happens under an AZ failure:** the design intends to tolerate selected AZ failures, but current project evidence does not establish this acceptance test as passed. Treat AZ-failure behavior as unvalidated until a dated test record proves otherwise.
 16. **What breaks first under a regional failure:** everything, until the Pilot Light is promoted — the entire point of having a *measured*, not assumed, RTO for this scenario (DR-01).
 17. **Design decisions most important for SAA-C03:** the RDS-vs-DynamoDB split (ADR-01), the DR-pattern selection (ADR-07), the IAM policy-evaluation model (§11.1), and the NAT/VPC-endpoint cost decision (§20.3) — these map directly onto the exam's highest-weight task statements.
 18. **Concepts useful professionally but not necessary for passing SAA-C03:** the full false-positive/false-negative detection-engineering methodology (§16.4), the offensive attack-scenario table (§15), and the incident-response runbooks (§17) go well beyond SAA-C03's scope — they are included because they are what makes this project a genuine security-engineering exercise rather than an exam checklist, per the assignment's own stated goal.
