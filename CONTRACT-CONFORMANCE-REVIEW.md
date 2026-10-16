@@ -1,4 +1,4 @@
-﻿# MedFlow API contract conformance review â€” updated local mock
+# MedFlow API contract conformance review — updated local mock
 
 This review applies to the proposed OpenAPI contract in `medflow-api-contract/medflow-api-contract/openapi/medflow-claims-v1.yaml`. The local server remains a learning mock, not a deployed or production-secure API.
 
@@ -40,5 +40,14 @@ This review applies to the proposed OpenAPI contract in `medflow-api-contract/me
 - Observed result: **22 test methods passed; exit code 0.** The two malformed-content-type cases run as subtests within the existing test method.
 - The source and test changes were compared with the pre-edit backup; the diff contained only the intended validation guard and regression test.
 - This is a local mock validation improvement, not evidence of full OpenAPI conformance or production security.
+
+## Latest local verification — 2026-10-16
+
+- Runtime: Python 3.13.
+- Command: `py -3.13 -m unittest discover -s tests -p "test_*.py" -v`, run from the canonical local API directory.
+- Observed result: **22 tests passed; exit code 0.**
+- This is evidence for the tested local mock behavior only. It does not establish full OpenAPI conformance, real authentication, production authorization, or production security.
+- No AWS infrastructure operations were performed during this test run.
+
 ## Verification
 Run `python -m unittest discover -s tests -v` from the local API directory. The test suite asserts the contract-relevant shapes and negative cases.

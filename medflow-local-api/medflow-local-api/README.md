@@ -36,7 +36,9 @@ Example request body (document metadata is optional; no file bytes are uploaded)
 }
 ```
 
-The `documentFileName` is metadata only. No document bytes are uploaded. API responses include `Cache-Control: no-store`; error payloads use the flat contract shape `{ "code", "message", "requestId" }`. The mock implements tenant-scoped list/detail lookups, validation, duplicate client-reference rejection, idempotency replay, and conflict on same idempotency key with a different payload.
+The `document.fileName`, `document.contentType`, and `document.sizeBytes` fields are metadata only. No document bytes are uploaded. API responses include `Cache-Control: no-store`; error payloads use the flat contract shape `{ "code", "message", "requestId" }`. The mock implements tenant-scoped list/detail lookups, validation, duplicate client-reference rejection, idempotency replay, and conflict on the same idempotency key with a different payload.
+
+Frontend distinction: the interface bundled with this folder is served by and calls this local mock API. The separate `medflow-portal-prototype/medflow-portal-prototype/` project is a browser-only localStorage prototype and is not integrated with this API.
 
 ## Run API tests
 

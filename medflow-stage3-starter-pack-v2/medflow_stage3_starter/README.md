@@ -1,6 +1,6 @@
 # MedFlow Stage 3 Starter Pack — v2
 
-This is a **local, proposed CloudFormation revision** for Stage 3 requirement S3-01. It has not been deployed and does not authorize AWS changes.
+This folder contains the **current proposed v2 CloudFormation revision** for Stage 3 requirement S3-01. A historical Stage 3 network-egress experiment was deployed and later torn down; that history does not establish that this exact v2 template was deployed. Acceptance evidence for egress from both Availability Zones and Availability Zone failure remains pending. This README does not authorize AWS changes.
 
 ## What changed from v1
 - The preflight showed both app subnets use the same existing route table.

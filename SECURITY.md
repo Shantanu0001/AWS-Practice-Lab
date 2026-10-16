@@ -1,4 +1,4 @@
-﻿# Security Rules for AWS-Practice-Lab
+# Security Rules for AWS-Practice-Lab
 
 This repository is used as a learning and proof-of-work record for the MedFlow AWS SAA-C03 project.
 
@@ -41,6 +41,10 @@ For security-sensitive changes:
 3. Verify the result.
 4. Review the exact staged diff.
 5. Commit only the intended files.
+
+## Reporting a security concern
+
+Report suspected vulnerabilities privately to the repository owner through an appropriate private contact method. Do not publish credentials, exploit details, real patient information, account identifiers, or unredacted evidence in a public issue. If a credential may have been exposed, revoke or rotate it promptly and investigate its scope.
 
 ## Repository status
 

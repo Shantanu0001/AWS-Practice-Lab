@@ -37,12 +37,14 @@ The default personal AWS budget is INR 0. No new AWS deployment is required to r
 
 ## Validation
 
-Previously recorded local test results:
+Latest verified local test run — 16 October 2026, Python 3.13:
 
-- Canonical local API: 22 tests passed.
-- Stage 3 v2 offline tests: 7 tests passed.
+- Canonical local API: 22 tests passed; exit code 0.
+- Stage 3 v2 offline tests: 7 tests passed; exit code 0.
+- Total: 29 passing tests across these two suites.
+- No AWS infrastructure operations were performed during these test runs.
 
-These results describe the recorded test runs, not a fresh execution on every checkout. Local unit tests and CloudFormation template validation do not prove successful AWS egress, resilience during an Availability Zone failure, production security, or end-to-end application integration.
+These results describe the specific local run above, not a fresh execution on every checkout. Offline unit tests do not prove successful AWS egress, resilience during an Availability Zone failure, production security, or end-to-end application integration. CloudFormation template validation is also not proof of deployed behavior.
 
 Use the individual project READMEs for prerequisites and commands. Review the Stage 3 traceability matrix for acceptance criteria and outstanding evidence.
 
